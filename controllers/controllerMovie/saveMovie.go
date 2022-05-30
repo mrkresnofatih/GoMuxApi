@@ -7,6 +7,7 @@ import (
 	models "mrkresnofatih/golearning/gomuxapi/models"
 	repositories "mrkresnofatih/golearning/gomuxapi/repositories"
 	types "mrkresnofatih/golearning/gomuxapi/types"
+	utils "mrkresnofatih/golearning/gomuxapi/utils"
 	"net/http"
 
 	mux "github.com/gorilla/mux"
@@ -18,8 +19,13 @@ func RegisterEndpointSaveMovie(r *mux.Router) {
 }
 
 var SaveMovie = types.BaseEndpoint(func(w http.ResponseWriter, r *http.Request) {
-	b, _ := io.ReadAll(r.Body)
+	b, e := io.ReadAll(r.Body)
 	defer r.Body.Close()
+	if e != nil {
+		e = utils.WrapError("IOReadAllError", e)
+		utils.HandleErrorReturns(e, w)
+		return
+	}
 
 	movieFromBody := models.Movie{}
 	json.Unmarshal(b, &movieFromBody)
@@ -34,18 +40,17 @@ var SaveMovie = types.BaseEndpoint(func(w http.ResponseWriter, r *http.Request) 
 		SetAutoID().
 		Build()
 
-	movie := repositories.SaveRedisMovieById(movieToBeSaved.MovieId, *movieToBeSaved)
+	movie, err := repositories.SaveRedisMovieById(movieToBeSaved.MovieId, *movieToBeSaved)
+	if err != nil {
+		err := utils.WrapError("SaveRedisMovieByIdError", err)
+		utils.HandleErrorReturns(err, w)
+		return
+	}
 
-	f, e := json.Marshal(movie)
-	if e != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		f, er := json.Marshal(map[string]string{
-			"Message": "Cannot Parse To Type",
-			"Code":    "4001",
-		})
-		if er != nil {
-		}
-		fmt.Fprint(w, string(f))
+	f, er := json.Marshal(movie)
+	if er != nil {
+		er = utils.WrapError("JsonMarshal Error", er)
+		utils.HandleErrorReturns(er, w)
 		return
 	}
 

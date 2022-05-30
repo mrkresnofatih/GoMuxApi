@@ -3,8 +3,9 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"time"
+
+	utils "mrkresnofatih/golearning/gomuxapi/utils"
 
 	redis "github.com/go-redis/redis/v8"
 )
@@ -18,15 +19,15 @@ func getRedisClient() *redis.Client {
 	return rds
 }
 
-func GetUnmarshallableValueByKey(key string) []byte {
+func GetUnmarshallableValueByKey(key string) ([]byte, error) {
 	rds := getRedisClient()
 	ctx := context.Background()
 	val, err := rds.Get(ctx, key).Result()
 	if err != nil {
-		log.Panic(err)
-		return nil
+		err = utils.WrapError("RedisClientErrorGet", err)
+		return nil, err
 	}
-	return []byte(val)
+	return []byte(val), nil
 }
 
 func SaveMarshallableValueByKey(key string, value interface{}, ttl time.Duration) (*string, error) {
@@ -34,14 +35,14 @@ func SaveMarshallableValueByKey(key string, value interface{}, ttl time.Duration
 	ctx := context.Background()
 	o, e := json.Marshal(value)
 	if e != nil {
-		log.Panic(e)
+		e = utils.WrapError("JsonMarshalError", e)
 		return nil, e
 	}
 
-	val, err := rds.Set(ctx, key, o, ttl).Result()
-	if err != nil {
-		log.Panic(err)
-		return nil, err
+	val, e := rds.Set(ctx, key, o, ttl).Result()
+	if e != nil {
+		e = utils.WrapError("RedisClientErrorGet", e)
+		return nil, e
 	}
 	return &val, nil
 }

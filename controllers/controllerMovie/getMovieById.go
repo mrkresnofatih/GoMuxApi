@@ -5,6 +5,7 @@ import (
 	"fmt"
 	repositories "mrkresnofatih/golearning/gomuxapi/repositories"
 	types "mrkresnofatih/golearning/gomuxapi/types"
+	utils "mrkresnofatih/golearning/gomuxapi/utils"
 	"net/http"
 
 	mux "github.com/gorilla/mux"
@@ -17,18 +18,17 @@ func RegisterEndpointGetMovieById(r *mux.Router) {
 
 var GetMovieById = types.BaseEndpoint(func(w http.ResponseWriter, r *http.Request) {
 	movieId := mux.Vars(r)["id"]
-	movie := repositories.GetRedisMovieById(movieId)
+	movie, err := repositories.GetRedisMovieById(movieId)
+	if err != nil {
+		err = utils.WrapError("GetRedisMovieById Error", err)
+		utils.HandleErrorReturns(err, w)
+		return
+	}
 
 	f, e := json.Marshal(movie)
 	if e != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		f, er := json.Marshal(map[string]string{
-			"Message": "Cannot Parse To Type",
-			"Code":    "4001",
-		})
-		if er != nil {
-		}
-		fmt.Fprint(w, string(f))
+		e = utils.WrapError("JsonMarshal Error", e)
+		utils.HandleErrorReturns(e, w)
 		return
 	}
 

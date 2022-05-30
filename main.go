@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	log.Println("Running!")
 	r := mux.NewRouter()
 	controllers.RegisterControllers(r)
 	log.Fatal(http.ListenAndServe(":3000", r))
